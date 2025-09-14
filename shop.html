@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Letters Shop</title>
+<style>
+
+:root{
+  --bg-grad: radial-gradient(1000px 800px at 0% -10%, rgba(255,255,255,0.04) 0%, transparent 60%),
+             linear-gradient(180deg,#0b1220,#0f172a);
+  --ink:#e5e7eb; --muted:#9ca3af;
+  --panel:rgba(255,255,255,0.06);
+  --border:rgba(255,255,255,0.12);
+  --accent:#b4a7d6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg-grad);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
+.topnav{position:sticky;top:0;z-index:10;backdrop-filter:blur(10px);background:rgba(255,255,255,0.06);border-bottom:1px solid var(--border)}
+.topnav .wrap{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.topnav .links{display:flex;gap:10px;flex-wrap:wrap}
+.topnav .links a{display:inline-block;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);text-decoration:none;color:var(--ink);background:rgba(0,0,0,0.25);font-weight:700}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.2);font-weight:700;color:var(--ink)}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.btn{display:inline-block;margin:8px 6px 0;padding:10px 16px;font-weight:700;border:0;border-radius:12px;background:var(--accent);color:#111;text-decoration:none;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid rgba(255,255,255,0.25)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.3);padding:16px}
+
+h1{margin:12px 0}
+.grid{display:grid;gap:16px}
+@media(min-width:900px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card.letter{background:#f7e6c8;color:#1f2937;border-color:#e9c88a}
+.envelope{height:160px;border-radius:12px;background:linear-gradient(180deg,#e9d6b5,#f7e6c8);border:1px solid #e9c88a;margin:12px 12px 0 12px;display:grid;place-items:center}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px dashed #c9a85a;background:#fff3c2;color:#7a5a1a;font-weight:800;font-size:12px;margin-left:8px}
+.actions{display:flex;justify-content:flex-end;padding:0 12px 12px}
+.actions .buy{background:#fbbf24;color:#111}
+.locked{opacity:.6;filter:grayscale(.15)}
+.resetrow{margin:10px 0}
+</style></head>
+<body>
+
+<header class="topnav">
+  <div class="wrap">
+    <nav class="links">
+      <a href="index.html">Home</a>
+      <a href="minigames.html">Minigames</a>
+      <a href="quests.html">Quests</a>
+      <a href="shop.html">Shop</a>
+    </nav>
+    <div class="pill">🪙 Coins: <span id="coinCount">0</span></div>
+  </div>
+</header>
+
+<div class="container">
+  <h1>letters 💌</h1>
+  <div class="resetrow"><button id="reset" class="btn ghost">reset progress</button></div>
+  <div id="meta" class="note" style="color:var(--muted);margin-bottom:10px"></div>
+  <div id="grid" class="grid"></div>
+</div>
+
+<script>
+  (function(){
+    function u(){ var el=document.getElementById('coinCount'); if(el){ el.textContent=String(parseInt(localStorage.getItem('ldg_coins')||'0',10)); } }
+    u(); window.addEventListener('storage', u);
+  })();
+</script>
+
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s) };
+  var store = {
+    get coins(){ return parseInt(localStorage.getItem('ldg_coins')||'0',10) },
+    set coins(v){ localStorage.setItem('ldg_coins', String(v)); },
+    get purchases(){ return JSON.parse(localStorage.getItem('ldg_purchases')||'{}') },
+    set purchases(v){ localStorage.setItem('ldg_purchases', JSON.stringify(v)) }
+  };
+  function buy(id, price){
+    if(store.coins < price) return false;
+    var p = store.purchases; store.coins = store.coins - price; p[id]=true; store.purchases=p; return true;
+  }
+  function owns(id){ return !!store.purchases[id]; }
+  var LETTER_PRICE = 15;
+  var LETTERS = new Array(6).fill(0).map(function(_,i){ return {id:'letter-'+(i+1), name:'letter '+(i+1)} });
+
+  function card(letter){
+    var have = owns(letter.id);
+    var item = document.createElement('div'); item.className = 'card letter' + (have?'':' locked');
+    item.innerHTML = '<div class="envelope">❤</div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 12px 12px">' +
+      '<div style="font-weight:800">'+letter.name+(have?'<span class="badge">unlocked</span>':'')+'</div>' +
+      '<div class="actions"><button class="btn '+(have?'':'buy')+'">'+(have?'open':'buy (🪙 '+LETTER_PRICE+')')+'</button></div></div>';
+    var btn = item.querySelector('button');
+    var opened = false;
+    function toggleOpen(){ opened = !opened; item.style.transform = opened? 'scale(1.01)':'none'; }
+    if(!have){
+      btn.addEventListener('click', function(){
+        if(buy(letter.id, LETTER_PRICE)){ item.classList.remove('locked'); btn.textContent='open'; toggleOpen(); updateMeta(); }
+        else { btn.animate([{transform:'none'},{transform:'scale(0.96)'},{transform:'none'}],{duration:200}); }
+      });
+    } else {
+      btn.addEventListener('click', toggleOpen);
+    }
+    return item;
+  }
+
+  function render(){
+    var grid = $('#grid'); grid.innerHTML='';
+    LETTERS.forEach(function(L){ grid.appendChild(card(L)); });
+    updateMeta();
+  }
+
+  function updateMeta(){
+    var p = store.purchases, cnt = 0; Object.keys(p).forEach(function(k){ if(k.startsWith('letter-') && p[k]) cnt++; });
+    $('#meta').textContent = 'Unlocked: '+cnt+' / '+LETTERS.length;
+    var hud=document.getElementById('coinCount'); if(hud) hud.textContent = String(store.coins);
+  }
+
+  document.getElementById('reset').addEventListener('click', function(){
+    if(confirm('reset progress? (letters will lock again)')){
+      var p = store.purchases; Object.keys(p).forEach(function(k){ if(k.startsWith('letter-')) delete p[k]; });
+      store.purchases = p; render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body></html>
